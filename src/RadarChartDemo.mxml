@@ -1,0 +1,472 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application preloader="fr.kapit.skin.classes.GenericPreloader"
+				xmlns:mx="http://www.adobe.com/2006/mxml"
+				layout="vertical"
+				creationComplete="onCreationComplete()"
+				xmlns:component="fr.kapit.skin.component.*"
+				xmlns:radarchart="fr.kapit.radarchart.*"
+				xmlns:kapit="fr.kapit.*">
+
+	<mx:Script>
+		<![CDATA[
+			import fr.kapit.skin.utils.KapITSkinFilters;
+			import fr.kapit.radarchart.RadarChartSeries;
+			import mx.collections.ArrayCollection;
+
+			[Bindable]
+			public var radarData:ArrayCollection;
+			
+			[Bindable]
+			public var currentSerieType:String=RadarChart.AREA_SERIES;
+			
+			private var fileName:String="data/world.xml";
+
+			private var colors:Array=[];
+
+			public function onCreationComplete():void
+			{
+				new URLLoader(new URLRequest(fileName)).addEventListener("complete", onXMLLoaded);
+			}
+
+			public function onXMLLoaded(event:Event):void
+			{
+				countriesDataGrid.dataProvider=new XML(event.target.data).elements();
+				var array:ArrayCollection=new ArrayCollection();
+				for each (var x:XML in countriesDataGrid.dataProvider)
+				{
+					array.addItem({name: x.@name, GDP: x.@gdp_total, Area: x.@area, Population: x.@population, Growth: x.@population_growth, Inflation: x.@inflation, 'Infant mortality': x.@infant_mortality});
+				}
+
+				radarChart.dataProvider=array;
+				countriesDataGrid.selectedIndices=[0, 1, 2, 3, 4, 5, 6];
+				initColors();
+				onCountryClicked();
+			}
+
+			/**
+			 * Changes the value of <code>seriesType</code> property in the Radar Chart given the user selection (Series type).
+			 * */
+			public function onSeriesTypeChanged():void
+			{
+				if (seriesTypeCombo.selectedIndex == 0)
+					currentSerieType=RadarChart.AREA_SERIES;
+				else if (seriesTypeCombo.selectedIndex == 1)
+					currentSerieType=RadarChart.LINE_SERIES;
+				else if (seriesTypeCombo.selectedIndex == 2)
+					currentSerieType=RadarChart.POINT_SERIES;
+			}
+
+			/**
+			 * Creates the new series to be displayed in the Radar Chart given the user selection (Countries).
+			 * */
+			public function onCountryClicked():void
+			{
+				var array:Array=[];
+				var a:Array=countriesDataGrid.selectedItems.reverse();
+				var b:Array=countriesDataGrid.selectedIndices.reverse();
+				for (var i:int=0; i < a.length; i++)
+				{
+					var series:RadarChartSeries=new RadarChartSeries();
+					series.name=a[i].@name;
+					series.color=colors[b[i]];
+					array.push(series);
+				}
+				radarChart.series=array;
+				radarChart.dataProvider=radarChart.dataProvider;
+				radarChart.selectedSeries=null;
+			}
+
+			/**
+			 * Handles multi selection using the ctrl or shift button plus the up or down arrow.
+			 * */
+			private function onKeyDown(event:KeyboardEvent):void
+			{
+				if ((event.shiftKey && event.keyCode == 40) || (event.shiftKey && event.keyCode == 38))
+				{
+					onCountryClicked();
+				}
+			}
+
+			/* ***************** Private methods *****************/
+
+			/**
+			 * Assigns different colors to the different series displayed in the Radar Chart and the datagrid.
+			 * */
+			private function initColors():void
+			{
+				for (var l:int=3; l >= 0; l--)
+					for (var k:int=0; k < 4; k++)
+						for (var j:int=3; j >= 0; j--)
+							for (var i:int=0; i < 4; i++)
+								colors.push(getColor((64 * i + 16 * j + 4 * k + l) / 255));
+
+				var colorIndex:uint=0;
+				for each (var item:Object in countriesDataGrid.dataProvider)
+				{
+					item.@color=colors[colorIndex];
+					colorIndex++;
+				}
+			}
+
+			/**
+			 * Returns a number that represents a color created by combining three different levels of red, green and blue.
+			 * */
+			private function getColor(n:Number):uint
+			{
+				return getRGB(getRed(n), getGreen(n), getBlue(n));
+			}
+
+			/**
+			 * Returns green color from a combination number.
+			 * */
+			private function getGreen(c:Number):uint
+			{
+				if (c >= 0.25 && c <= 0.75)
+					return 255;
+				if (c < 0.25)
+					return uint(c / 0.25 * 255);
+				c=1 - c;
+				return uint(c / 0.25 * 255);
+			}
+
+			/**
+			 * Returns blue color from a combination number.
+			 * */
+			private function getBlue(c:Number):uint
+			{
+				if (c <= 0.25)
+					return 255;
+				if (c >= 0.5)
+					return 0;
+				return 255 - uint((c - 0.25) / 0.25 * 255)
+			}
+
+			/**
+			 * Returns red color from a combination number.
+			 * */
+			private function getRed(c:Number):uint
+			{
+				if (c <= 0.5)
+					return 0;
+				if (c >= 0.75)
+					return 255;
+				return uint((c - 0.5) / 0.25 * 255);
+			}
+
+			/**
+			 * Returns a color combining three different levels of blue red and green.
+			 * */
+			private function getRGB(r:uint, g:uint, b:uint):uint
+			{
+				if (r > 0xff)
+					r=0xff;
+				if (r < 0)
+					r=0;
+				if (g > 0xff)
+					g=0xff;
+				if (g < 0)
+					g=0;
+				if (b > 0xff)
+					b=0xff;
+				if (b < 0)
+					b=0;
+
+				return b + 256 * (g + 256 * r);
+			}
+			
+		]]>
+	</mx:Script>
+
+	<mx:HBox id="applicationContainer" width="100%" height="100%"
+		paddingBottom="10" paddingLeft="10" paddingRight="10" paddingTop="10"
+		horizontalGap="10" verticalGap="10">
+		<mx:VBox width="230" height="100%" styleName="toolPanelContainer">
+			<component:ToolPanel width="100%">
+				<component:GenericTitle title="OPTIONS"/>
+				<mx:Accordion width="100%" creationPolicy="all" resizeToContent="true">
+					<component:AccordionChildContainerVBox label="Grid">
+						<mx:VBox width="100%" styleName="toolContainer"
+							borderThickness="0" paddingBottom="10">
+							<mx:Label text="View grid" paddingBottom="-5"/>
+							<mx:HBox width="100%">
+								<mx:RadioButton label="Yes" groupName="viewGridGroup" id="viewGridYes" selected="true"/>
+								<mx:RadioButton label="No" groupName="viewGridGroup"/>
+							</mx:HBox>
+						</mx:VBox>
+						<mx:VBox width="100%" styleName="toolContainer"
+							borderThickness="0" paddingBottom="10">
+							<mx:Label text="Number of divisions" paddingBottom="-5"/>
+							<mx:HSlider width="100%" id="numberOfDivisions"
+								minimum="3" maximum="10"
+								value="6" snapInterval="1" tickInterval="1" labels="['3','10']"
+								tickColor="black"/>
+						</mx:VBox>
+						<mx:VBox width="100%" styleName="toolContainer"
+							borderThickness="0" paddingBottom="10">
+							<mx:Label text="Grid width" paddingBottom="-5"/>
+							<mx:HSlider width="100%" id="gridWidth"
+								minimum="1" maximum="10"
+								snapInterval="0.5" value="1" tickInterval="0.5" labels="['1','10']"
+								tickColor="black"/>
+						</mx:VBox>
+						<mx:VBox width="100%" styleName="toolContainer"
+							borderThickness="0">
+							<mx:Label text="Grid alpha" paddingBottom="-5"/>
+							<mx:HSlider width="100%" id="gridAlpha"
+								minimum="0" maximum="1"
+								snapInterval="0.05" value="0.8" labels="['0','1']"
+								tickColor="black" tickInterval="0.05"/>
+						</mx:VBox>
+					</component:AccordionChildContainerVBox>
+					
+					<component:AccordionChildContainerVBox 	label="Axes" >
+						<mx:HBox width="100%"
+								 styleName="toolContainer"
+								 borderThickness="0"
+								 paddingBottom="10">
+							<mx:Label 	text="Axes color"
+										paddingBottom="-5"/>
+							<mx:ColorPicker selectedColor="0xcccccc"
+											id="axesColor"/>
+						</mx:HBox>
+						<mx:VBox width="100%"
+								 styleName="toolContainer"
+								 borderThickness="0"
+								 paddingBottom="10">
+							<mx:Label text="View graduations" paddingBottom="-5"/>
+							<mx:HBox width="100%">
+								<mx:RadioButton label="Yes"
+												groupName="viewGraduationGroup"
+												selected="true"
+												id="viewGraduationsYes"/>
+								<mx:RadioButton label="No"
+												groupName="viewGraduationGroup"/>
+							</mx:HBox>
+						</mx:VBox>
+						<mx:VBox width="100%"
+								 styleName="toolContainer"
+								 borderThickness="0"
+								 paddingBottom="10">
+							<mx:Label text="View arrows" paddingBottom="-5"/>
+							<mx:HBox width="100%">
+								<mx:RadioButton label="Yes"
+												groupName="viewArrowsGroup"
+												selected="true"
+												id="viewArrowsYes"/>
+								<mx:RadioButton label="No"
+												groupName="viewArrowsGroup"/>
+							</mx:HBox>
+						</mx:VBox>
+						<mx:VBox width="100%"
+								 styleName="toolContainer"
+								 borderThickness="0"
+								 paddingBottom="10">
+							<mx:Label text="Axes width" paddingBottom="-5"/>
+							<mx:HSlider width="100%"
+										minimum="1"
+										maximum="10"
+										snapInterval="0.5"
+										id="axesWidth"
+										value="2"
+										labels="['1','10']"
+										tickColor="black"
+										tickInterval="0.5"/>
+						</mx:VBox>
+						<mx:VBox width="100%"
+								 styleName="toolContainer"
+								 borderThickness="0">
+							<mx:Label text="Axes alpha" paddingBottom="-5"/>
+							<mx:HSlider width="100%"
+										minimum="0"
+										maximum="1"
+										snapInterval="0.05"
+										id="axesAlpha"
+										value="1"
+										labels="['0','1']"
+										tickColor="black"
+										tickInterval="0.05"/>
+						</mx:VBox>
+					</component:AccordionChildContainerVBox>
+					<component:AccordionChildContainerVBox 	label="Series" >
+						<mx:VBox width="100%"
+								 styleName="toolContainer"
+								 borderThickness="0"
+								 paddingBottom="10">
+							<mx:Label text="Lines type"/>
+							<mx:ComboBox id="linesTypeCombo"
+										 change="onSeriesTypeChanged()">
+								<mx:String>curve</mx:String>
+								<mx:String>linear</mx:String>
+							</mx:ComboBox>
+						</mx:VBox>
+						
+						<mx:VBox width="100%" visible="{linesTypeCombo.selectedItem=='curve'}" includeInLayout="{linesTypeCombo.selectedItem=='curve'}"
+								 styleName="toolContainer"
+								 borderThickness="0"
+								 paddingBottom="10">
+							<mx:Label text="Curve Angle"/>
+							<mx:HSlider id="curvatue" minimum="0" maximum="1" value="0.4" /> 
+						</mx:VBox>
+						
+						<mx:VBox width="100%"
+								 styleName="toolContainer"
+								 borderThickness="0"
+								 paddingBottom="10">
+							<mx:Label text="Series type"/>
+							<mx:ComboBox id="seriesTypeCombo"
+										 change="onSeriesTypeChanged()">
+								<mx:String>Area Series</mx:String>
+								<mx:String>Line Series</mx:String>
+								<mx:String>Point Series</mx:String>
+							</mx:ComboBox>
+						</mx:VBox>
+						<mx:VBox width="100%"
+								 styleName="toolContainer"
+								 borderThickness="0"
+								 paddingBottom="10">
+							<mx:Label text="Series width" paddingBottom="-5"/>
+							<mx:HSlider width="100%"
+										minimum="1"
+										maximum="10"
+										snapInterval="0.5"
+										id="SeriesWidth"
+										value="2"
+										labels="['1','10']"
+										tickColor="black"
+										tickInterval="0.5"/>
+						</mx:VBox>
+						<mx:VBox width="100%"
+								 styleName="toolContainer"
+								 borderThickness="0"
+								 paddingBottom="10">
+							<mx:Label text="Series alpha" paddingBottom="-5"/>
+							<mx:HSlider width="100%"
+										minimum="0"
+										maximum="1"
+										snapInterval="0.05"
+										id="SeriesAlpha"
+										value="1"
+										labels="['0','1']"
+										tickColor="black"
+										tickInterval="0.05"/>
+						</mx:VBox>
+						<mx:VBox width="100%"
+								 styleName="toolContainer"
+								 borderThickness="0">
+							<mx:Label text="Series fill alpha" paddingBottom="-5"/>
+							<mx:HSlider width="100%"
+										minimum="0"
+										maximum="1"
+										snapInterval="0.05"
+										id="SeriesFillAlpha"
+										value="0.2"
+										labels="['0','1']"
+										tickColor="black"
+										tickInterval="0.05"/>
+						</mx:VBox>
+						<mx:VBox width="100%"
+								 styleName="toolContainer"
+								 borderThickness="0">
+							<mx:Label text="Enable point drag" paddingBottom="-5"/>
+							<mx:HBox width="100%">
+								<mx:RadioButton label="Yes"
+												groupName="enablePointDragGroup"
+												id="enablePointDragYes"/>
+								<mx:RadioButton label="No"
+												groupName="enablePointDragGroup"
+												selected="true"/>
+							</mx:HBox>
+						</mx:VBox>
+						
+					</component:AccordionChildContainerVBox>
+					<component:AccordionChildContainerVBox 	label="ToolTip" >
+						<mx:VBox width="100%"
+								 styleName="toolContainer"
+								 borderThickness="0"
+								 >
+							<mx:Label text="Use Custom ToolTip" paddingBottom="-5"/>
+							<mx:RadioButtonGroup id="useCustomToolTip" />
+							<mx:HBox>
+								<mx:RadioButton label="Yes" groupName="useCustomToolTip" value="{CustomToolTip}"  />
+								<mx:RadioButton label="No" groupName="useCustomToolTip" value="{null}" selected="true"/>
+							</mx:HBox>
+						</mx:VBox>
+					</component:AccordionChildContainerVBox>
+				</mx:Accordion>
+			</component:ToolPanel>
+		</mx:VBox>
+		<mx:VBox width="100%" height="100%" styleName="toolPanelContainer">			
+			<mx:HBox id="componentContainer" styleName="genericContainer"
+				width="100%" height="100%"
+				verticalScrollPolicy="auto" horizontalScrollPolicy="auto"
+				filters="{KapITSkinFilters.genericShadow()}">
+				<radarchart:RadarChart id="radarChart"
+					width="100%" height="100%"
+					hPadding="{this.width/20}" vPadding="{this.height/20}"
+					seriesField="name" dataProvider="{radarData}"
+					divisions="{numberOfDivisions.value}"
+					showGrid="{viewGridYes.selected}"
+					gridWidth="{gridWidth.value}" gridAlpha="{gridAlpha.value}"
+					seriesAlpha="{SeriesAlpha.value}" seriesWidth="{SeriesWidth.value}"
+					axisWidth="{axesWidth.value}" axisAlpha="{axesAlpha.value}" axisColor="{axesColor.selectedColor}"
+					showGraduations="{viewGraduationsYes.selected}"
+					seriesFillAlpha="{SeriesFillAlpha.value}"
+					seriestype="{currentSerieType}"
+					showAxesArrow="{viewArrowsYes.selected}"
+					lineType="{linesTypeCombo.selectedItem}"
+					curvature="{curvatue.value}" 
+					customToolTipClass="{useCustomToolTip.selectedValue as Class}"
+					enablePointDrag="{enablePointDragYes.selected}"
+				/>
+			</mx:HBox>
+			<component:ToolPanel width="100%" height="135">
+				<radarchart:RadarChartSeriesLegend id="seriesLegend" radarChart="{radarChart}"
+					width="100%" height="100%"/>
+			</component:ToolPanel>
+		</mx:VBox>
+		<mx:VBox width="280" height="100%" styleName="toolPanelContainer">
+			<component:ToolPanel width="100%" height="100%">
+				<component:GenericTitle title="COUNTRIES LIST"/>
+				<mx:DataGrid id="countriesDataGrid" width="100%" height="100%"
+					allowMultipleSelection="true" sortableColumns="false"
+					itemClick="onCountryClicked()" keyDown="onKeyDown(event)">
+					<mx:columns>
+						<mx:DataGridColumn width="30">
+							<mx:itemRenderer>
+								<mx:Component>
+									<mx:HBox width="100%" horizontalAlign="center">
+										<mx:HBox width="20" height="100%"
+												 backgroundColor="{data.@color}" backgroundAlpha="0.4"
+												 borderStyle="solid" borderColor="{data.@color}" borderThickness="2"/>
+									</mx:HBox>
+								</mx:Component>
+							</mx:itemRenderer>
+						</mx:DataGridColumn>
+						<mx:DataGridColumn headerText="Country">
+							<mx:itemRenderer>
+								<mx:Component>
+									<mx:Label text="{data.@name}" truncateToFit="true" />
+								</mx:Component>
+							</mx:itemRenderer>			   
+						</mx:DataGridColumn>
+						<mx:DataGridColumn headerText="Continent" >
+							<mx:itemRenderer>
+								<mx:Component>
+									<mx:Label text="{data.@continent}" truncateToFit="true" />
+								</mx:Component>
+							</mx:itemRenderer>	
+						</mx:DataGridColumn>
+						<mx:DataGridColumn headerText="Region"
+										   width="60">
+							<mx:itemRenderer>
+								<mx:Component>
+									<mx:Label text="{data.@region}" truncateToFit="true" />
+								</mx:Component>
+							</mx:itemRenderer>	
+						</mx:DataGridColumn>
+					</mx:columns>
+				</mx:DataGrid>
+			</component:ToolPanel>
+		</mx:VBox>
+	</mx:HBox>
+</mx:Application>

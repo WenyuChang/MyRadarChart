@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" implements="fr.kapit.radarchart.IRadarChartToolTip" mouseChildren="false" mouseEnabled="false">
+	<mx:Script>
+		<![CDATA[
+		
+			private var _label:String;
+			private var _axisLabel:String;
+			private var _value:Number;
+			private var _color:uint;
+			private var _seriesPoint:Point;
+			
+			private var _radarChartCenter:Point;
+			/**
+			 * Indicates the series label.
+			 */
+			override public function set label(value:String):void{
+					_label = value;
+					invalidateProperties();
+			}
+			/**
+			 * Indicates the axis label.
+			 */
+			public function set axisLabel(value:String):void{
+				_axisLabel = value;
+				invalidateProperties()
+			}
+			
+			/**
+			 * Indicates that will be displayed in the tooltip.
+			 */
+			public function set value(v:Number):void{
+				_value = v;
+			}
+			
+			/**
+			 * Indicates the coordinates (in the stage coordinates system) of the center of the radarchart.
+			 */
+			public function set radarChartCenter(value:Point):void{
+				_radarChartCenter = value;
+			}
+			
+			/**
+			 * Indicates the coordiantes (in the stage coordinates system) of point for which the tooltip is beeing displayed.
+			 */
+			public function set seriesPoint(value:Point):void{
+				_seriesPoint = value;
+			}
+			
+			/**
+			 * Indicates the series color.
+			 */
+			public function set color(value:uint):void{
+				_color = value;
+				invalidateProperties();
+			}
+			
+			override protected function commitProperties():void
+			{
+				super.commitProperties();
+				if(container)
+					container.setStyle('borderColor', _color);
+				if(seriesLabel)
+					seriesLabel.text = _label;
+				if(axis)
+					axis.text = _axisLabel;
+				if(valueLabel)
+					valueLabel.text = _value.toString();
+			}
+			
+			override protected function updateDisplayList(unscaledWidth:Number, unscaledHeight:Number):void
+			{
+				super.updateDisplayList(unscaledWidth, unscaledHeight);
+				container.x = _seriesPoint.x>_radarChartCenter.x ? _seriesPoint.x + 5 : _seriesPoint.x-5 - container.width;
+				container.y = _seriesPoint.y>_radarChartCenter.y ? _seriesPoint.y + 5 : _seriesPoint.y-5 - container.height;
+			}
+			
+			public function set text(value:String):void
+			{
+				
+			}
+			
+			public function get text():String
+			{
+				return null;	
+			}
+			
+		]]>
+	</mx:Script>
+	<mx:VBox id="container" borderStyle="solid" backgroundColor="#FFFFFF">
+		<mx:Label id="seriesLabel" fontWeight="bold" />
+		<mx:Label id="axis" />
+		<mx:Label id="valueLabel" />		
+	</mx:VBox>
+</mx:Canvas>
